@@ -6,6 +6,7 @@
 ![Azure SQL](https://img.shields.io/badge/Azure_SQL-Database-0078D4?logo=microsoftazure&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)
 ![Power BI](https://img.shields.io/badge/Power_BI-Dashboard-F2C811?logo=powerbi&logoColor=black)
+![CI](https://github.com/carlosgomezaparicio/wind-turbine-monitoring/actions/workflows/ci.yml/badge.svg)
 
 An end-to-end predictive maintenance pipeline for a wind farm. Real SCADA sensor readings are stored in a cloud database, used to train an unsupervised anomaly detection model, served through a REST API, and summarized in a Power BI dashboard aimed at a non-technical audience.
 
@@ -177,10 +178,19 @@ wind-turbine-monitoring/
 ├── dashboards/
 │   ├── wind-turbine-monitoring-dashboards.pbix   # the Power BI report itself
 │   └── images/                      # dashboard screenshots used in this README
-├── data/                            # raw and processed data, not committed
+├── tests/
+│   ├── test_scoring.py               # unit tests for feature computation + inference
+│   └── test_api.py                   # tests for the FastAPI endpoints
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # runs the test suite and a Docker build on every push
+├── data/                            # raw and processed data, not committed (except
+│                                     # power_curve_reference.parquet, needed by the API)
 ├── Dockerfile
+├── pytest.ini
 ├── requirements.txt                 # full environment (notebooks + ETL)
-└── requirements-api.txt             # pinned, minimal set for the API image
+├── requirements-api.txt             # pinned, minimal set for the API image
+└── requirements-dev.txt             # pytest + httpx, for running the test suite
 ```
 
 ---
@@ -211,12 +221,23 @@ To reproduce the training pipeline instead of just running the API, install `req
 
 ---
 
+## Tests
+
+```bash
+pip install -r requirements-api.txt -r requirements-dev.txt
+pytest -v
+```
+
+10 tests, covering the two things most likely to silently break: `scoring.py` (the power curve lookup and its fallback for wind speeds with no exact training bin, the first-reading-has-no-history case, that turbines do not leak state into each other, and that an extreme power deviation actually gets flagged) and the API contract itself (`/health`, a full `/readings/score` round trip, and that a malformed request is rejected with a 422 instead of crashing). Every GitHub Actions run also does a full `docker build`, so a broken `Dockerfile` or a dependency that will not install is caught the same way a broken test would be, not discovered later by hand.
+
+---
+
 ## Known Limitations
 
 Being upfront about what this does not solve yet:
 
 - **In-memory history.** The per-turbine history used for delta features lives in the API process memory. A restart clears it, and it would not work correctly across multiple API instances behind a load balancer. A production version would back this with Redis or a database table, as noted directly in `src/api/store.py`.
-- **No automated tests.** The API and scoring logic were verified manually, including against real historical readings, not synthetic ones, but there is no `pytest` suite yet.
+- **Test coverage is the API layer, not the pipeline.** `tests/` covers `scoring.py` and the FastAPI endpoints, which is where a silent regression would be most costly (wrong predictions served to a real client). The SQL views, the ETL scripts, and the notebooks themselves have no automated tests, they are still checked manually.
 - **No model versioning or retraining pipeline.** The model was trained once on the available historical data, with no tracking of versions or scheduled retraining.
 - **Moderate recall against known downtime (52.4%), inflated by a noisy label.** `is_downtime` mixes real faults with routine wind cut-out stops that should not be expected to look anomalous. Separating those two causes would give a recall number that actually reflects fault detection instead of being dragged down by stops the model was never supposed to catch.
 - **The lead time histogram has a known edge bias.** As explained in the Dashboard section, the bar at the 66-72h boundary is inflated by how the 72-hour lookback window interacts with the model's background noise rate, not by a genuine 3-day-ahead warning signal. It is left visible in the chart with the caveat documented here rather than silently trimmed.
@@ -235,6 +256,7 @@ Being upfront about what this does not solve yet:
 | API | FastAPI, uvicorn, Pydantic |
 | Containerization | Docker |
 | Dashboard | Power BI, Power Query |
+| Testing / CI | pytest, GitHub Actions |
 | Environment | Jupyter Notebook |
 
 ---
