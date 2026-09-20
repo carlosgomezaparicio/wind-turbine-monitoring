@@ -176,8 +176,6 @@ wind-turbine-monitoring/
 │   └── isolation_forest.joblib
 ├── dashboards/
 │   ├── wind-turbine-monitoring-dashboards.pbix   # the Power BI report itself
-│   ├── theme.json                   # Power BI light theme
-│   ├── theme-dark.json              # Power BI dark theme
 │   └── images/                      # dashboard screenshots used in this README
 ├── data/                            # raw and processed data, not committed
 ├── Dockerfile
@@ -209,7 +207,7 @@ docker stop wind-turbine-api
 docker rm wind-turbine-api
 ```
 
-To reproduce the training pipeline instead of just running the API, install `requirements.txt` in a virtual environment, set the Azure SQL credentials in a `.env` file (`DB_SERVER`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`), and run the notebooks in order (`01` through `05`). The Power BI report itself is included at `dashboards/wind-turbine-monitoring-dashboards.pbix`, open it directly in Power BI Desktop; `05_dashboard_prep.ipynb` produces every CSV it reads, and `dashboards/theme.json` / `theme-dark.json` reproduce its color scheme if you want to rebuild it from scratch.
+To reproduce the training pipeline instead of just running the API, install `requirements.txt` in a virtual environment, set the Azure SQL credentials in a `.env` file (`DB_SERVER`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`), and run the notebooks in order (`01` through `05`). The Power BI report itself is included at `dashboards/wind-turbine-monitoring-dashboards.pbix`, open it directly in Power BI Desktop; `05_dashboard_prep.ipynb` produces every CSV it reads.
 
 ---
 
