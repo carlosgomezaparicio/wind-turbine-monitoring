@@ -1,0 +1,6 @@
+.env
+data/raw
+notebooks
+__pycache__
+*.pyc
+.git
